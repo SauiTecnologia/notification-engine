@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body>
+📋 *NOVA TAREFA ATRIBUÍDA*
+
+Olá {data.name},
+
+Uma nova tarefa foi atribuída a você.
+
+📌 *DETALHES DA TAREFA:*
+• Título: *{data.taskTitle}*
+• ID: {data.entityId}
+• Prioridade: {data.priority}
+• Prazo: {data.deadline}
+• Projeto: {data.context.projectName}
+
+🎯 *OBJETIVO:*
+{data.context.taskDescription or 'Verifique os detalhes no sistema'}
+
+🔗 *ACESSO RÁPIDO:*
+{data.systemUrl}/tasks/{data.entityId}
+
+⏰ *RECOMENDAÇÃO:*
+Verifique a tarefa o quanto antes para garantir o cumprimento do prazo.
+
+---
+_Esta é uma mensagem automática do Apporte._
+_© {data.date.year} Apporte._
+</body>
+</html>

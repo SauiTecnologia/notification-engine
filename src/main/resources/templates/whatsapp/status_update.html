@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<body>
+📊 *ATUALIZAÇÃO DE STATUS*
+
+Olá {data.name},
+
+O status do item *{data.itemName}* foi atualizado.
+
+🔄 *MUDANÇA DE STATUS:*
+• Item: {data.itemName}
+• De: {data.oldStatus}
+• Para: *{data.newStatus}*
+• Data da Atualização: {data.date}
+• Responsável: {data.context.updatedBy or 'Sistema'}
+
+{#if data.newStatus == 'APROVADO'}
+✅ *PARABÉNS!* O item foi aprovado com sucesso.
+{#else if data.newStatus == 'REPROVADO'}
+❌ *ATENÇÃO:* O item foi reprovado. Verifique os comentários.
+{#else if data.newStatus == 'PENDENTE'}
+🔄 Aguardando ação ou informação adicional.
+{#else if data.newStatus == 'EM ANDAMENTO'}
+⚙️ Item em processo de execução.
+{/if}
+
+{#if data.context.comments}
+💬 *COMENTÁRIOS:*
+{data.context.comments}
+{/if}
+
+🔗 *DETALHES COMPLETOS:*
+{data.systemUrl}/{data.entityType}/{data.entityId}
+
+---
+_Esta é uma mensagem automática do Apporte._
+</body>
+</html>

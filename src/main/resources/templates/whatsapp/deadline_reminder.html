@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<body>
+⏰ *LEMBRETE DE PRAZO*
+
+Olá {data.name},
+
+O prazo para *{data.itemName}* está se aproximando.
+
+⚠️ *ALERTA:*
+• Item: {data.itemName}
+• Tipo: {data.entityType}
+• Prazo Final: *{data.deadline}*
+• Dias Restantes: {data.daysLeft} {#if data.daysLeft.toInt > 1} dias {#else} dia {/if}
+• Status: {data.context.status or 'Em andamento'}
+
+🔴 *URGÊNCIA:*
+{#if data.daysLeft.toInt <= 2}
+‼️ *ATENÇÃO: Prazo muito curto! Ação imediata necessária.*
+{#else if data.daysLeft.toInt <= 5}
+⚠️ *Prazo próximo. Recomenda-se ação prioritária.*
+{#else}
+📅 Prazo em vista. Mantenha o acompanhamento.
+{/if}
+
+🔗 *PARA AÇÃO:*
+{data.systemUrl}/{data.entityType}/{data.entityId}
+
+📞 *PRECISA DE AJUDA?*
+Entre em contato com o gerente do projeto.
+
+---
+_Esta é uma mensagem automática do Apporte._
+</body>
+</html>

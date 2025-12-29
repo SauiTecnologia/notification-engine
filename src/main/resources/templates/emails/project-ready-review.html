@@ -1,0 +1,51 @@
+{! Coloque em src/main/resources/templates/email/project-ready-review.html !}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projeto Pronto para Avaliação</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .button { 
+            display: inline-block; 
+            padding: 12px 24px; 
+            background: #4F46E5; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 4px; 
+            margin-top: 20px; 
+        }
+        .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Apporte</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Olá, {nome}</h2>
+            
+            <p>Seu projeto <strong>{projectTitle}</strong> está pronto para avaliação.</p>
+            
+            <p>O projeto foi movido da coluna "{fromColumn}" para "{toColumn}" no pipeline do edital.</p>
+            
+            <p>Em breve nossos avaliadores entrarão em contato.</p>
+            
+            <a href="{projectUrl}" class="button">Ver Projeto</a>
+            
+            <p>Atenciosamente,<br>Equipe Apporte</p>
+        </div>
+        
+        <div class="footer">
+            <p>Esta é uma mensagem automática. Por favor, não responda este e-mail.</p>
+            <p>© {year} Apporte. Todos os direitos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>

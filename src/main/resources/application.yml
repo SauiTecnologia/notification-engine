@@ -1,2 +1,198 @@
-greeting:
-  message: "hello"
+quarkus:
+  # ========== APLICAÇÃO ==========
+  application:
+    name: ${APP_NAME:notification-engine}
+    version: ${APP_VERSION:1.0.0-SNAPSHOT}
+  
+  profile: ${QUARKUS_PROFILE:dev}
+  
+  # ========== HTTP ==========AA
+  http:
+    port: ${HTTP_PORT:8082}
+    host: ${HTTP_HOST:0.0.0.0}
+    cors:
+      ~: ${CORS_ENABLED:false}
+      origins: ${CORS_ORIGINS:http://localhost:3000}
+    body:
+      uploads:
+        limit: 10M
+    idle-timeout: 30s
+    read-timeout: 30s
+  
+  # ========== DATABASE ==========
+  datasource:
+    db-kind: ${DB_KIND:h2}
+    jdbc:
+      url: ${DB_JDBC_URL:jdbc:h2:mem:notification_dev;MODE=PostgreSQL;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  
+  # ========== HIBERNATE ==========
+  hibernate-orm:
+    database:
+      generation: ${DB_GENERATION:drop-and-create}
+    packages:
+      scan: "com.apporte.core.model"
+    log:
+      sql: ${LOG_SQL:false}
+  
+  # ========== OIDC/SECURITY ==========
+  oidc:
+    enabled: ${OIDC_ENABLED:false}
+    auth-server-url: ${OIDC_AUTH_SERVER_URL:}
+    client-id: ${OIDC_CLIENT_ID:notification-service}
+    credentials:
+      secret: ${OIDC_CLIENT_SECRET:}
+    token:
+      issuer: ${OIDC_ISSUER:}
+    roles:
+      role-claim-path: "realm_access.roles"
+  
+  security:
+    users:
+      embedded:
+        enabled: true
+        plain-text: true
+        users: ${SECURITY_USERS:admin:admin,admin;user:user,user}
+        roles: ${SECURITY_ROLES:admin:notification-admin;user:notification-sender}
+  
+  # ========== MAIL ==========
+  mailer:
+    from: ${EMAIL_FROM:noreply@apporte.com}
+    mock: ${EMAIL_MOCK:true}
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    start-tls: ${SMTP_START_TLS:REQUIRED}
+    auth: ${SMTP_AUTH:REQUIRED}
+  
+  # ========== LOGGING ==========
+  log:
+    level: ${LOG_LEVEL:DEBUG}
+    console:
+      json: ${LOG_JSON:false}
+      format: "%d{yyyy-MM-dd HH:mm:ss} %-5p [%c{1.}] %s%e%n"
+    category:
+      "com.apporte":
+        level: ${APP_LOG_LEVEL:DEBUG}
+      "org.hibernate":
+        level: ${HIBERNATE_LOG_LEVEL:WARN}
+  
+  # ========== OPENAPI/SWAGGER ==========
+  swagger-ui:
+    always-include: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui
+  
+  smallrye-openapi:
+    path: /openapi
+  
+  # ========== HEALTH ==========
+  smallrye-health:
+    root-path: /q/health
+    health-ui:
+      always-include: ${SWAGGER_ENABLED:true}
+  
+  # ========== METRICS ==========
+  micrometer:
+    enabled: ${METRICS_ENABLED:true}
+    export:
+      prometheus:
+        enabled: true
+        path: /q/metrics
+    binders:
+      jvm: true
+      processor: true
+      jdbc: true
+  
+  # ========== CACHE ==========
+  cache:
+    enabled: ${CACHE_ENABLED:true}
+    caffeine:
+      "recipients-cache":
+        expire-after-write: ${CACHE_RECIPIENTS_TTL:300s}
+        maximum-size: ${CACHE_RECIPIENTS_MAX_SIZE:1000}
+      "users-cache":
+        expire-after-write: ${CACHE_USERS_TTL:3600s}
+        maximum-size: ${CACHE_USERS_MAX_SIZE:5000}
+  
+  # ========== SCHEDULER ==========
+  scheduler:
+    enabled: ${SCHEDULER_ENABLED:true}
+  
+  # ========== TEST CONFIG ==========
+  test:
+    arg-line: "--add-opens=java.base/java.lang=ALL-UNNAMED"
+
+# ========== CONFIGURAÇÕES DA APLICAÇÃO ==========
+app:
+  environment: ${APP_ENVIRONMENT:development}
+  base-url: ${APP_BASE_URL:http://localhost:8082}
+  
+  notification:
+    retry:
+      max-attempts: ${NOTIFICATION_RETRY_ATTEMPTS:3}
+      initial-delay: ${NOTIFICATION_RETRY_DELAY:1000ms}
+      max-delay: ${NOTIFICATION_RETRY_MAX_DELAY:10000ms}
+      jitter: ${NOTIFICATION_RETRY_JITTER:0.5}
+    
+    templates:
+      email:
+        path: "templates/email"
+      whatsapp:
+        path: "templates/whatsapp"
+    
+    whatsapp:
+      enabled: ${WHATSAPP_ENABLED:false}
+      headless: ${WHATSAPP_HEADLESS:false}
+      session-path: ${WHATSAPP_SESSION_PATH:./whatsapp-session}
+      timeout: ${WHATSAPP_TIMEOUT:30s}
+      max-retries: ${WHATSAPP_MAX_RETRIES:3}
+      qr-timeout: ${WHATSAPP_QR_TIMEOUT:120s}
+      mock: ${WHATSAPP_MOCK:true}
+    
+    email:
+      company-name: ${EMAIL_COMPANY_NAME:Apporte}
+      support-email: ${EMAIL_SUPPORT:support@apporte.com}
+      unsubscribe-url: "https://app.apporte.com/unsubscribe"
+      mock: ${EMAIL_MOCK:true}
+  
+  # External services
+  services:
+    workflow:
+      base-url: ${WORKFLOW_SERVICE_URL:http://localhost:8081}
+      timeout: ${WORKFLOW_TIMEOUT:10s}
+    user:
+      base-url: ${USER_SERVICE_URL:http://localhost:8083}
+      timeout: ${USER_TIMEOUT:5s}
+  
+  # Keycloak Admin API
+  keycloak:
+    admin:
+      server-url: ${KEYCLOAK_ADMIN_URL:}
+      client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+      username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+      password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+      realm: ${KEYCLOAK_ADMIN_REALM:apporte}
+      connection-timeout: 10000
+      socket-timeout: 30000
+  
+  # Feature flags
+  features:
+    whatsapp-notifications: ${FEATURE_WHATSAPP:false}
+    email-notifications: ${FEATURE_EMAIL:true}
+    push-notifications: ${FEATURE_PUSH:false}
+    sms-notifications: ${FEATURE_SMS:false}
+    mock-mode: ${FEATURE_MOCK:true}
+  
+  # Rate limiting
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:false}
+    max-requests: ${RATE_LIMIT_MAX_REQUESTS:100}
+    per-seconds: ${RATE_LIMIT_PER_SECONDS:60}
+  
+  # Audit logging
+  audit:
+    enabled: ${AUDIT_ENABLED:true}
+    log-requests: ${AUDIT_LOG_REQUESTS:true}
+    log-responses: ${AUDIT_LOG_RESPONSES:false}

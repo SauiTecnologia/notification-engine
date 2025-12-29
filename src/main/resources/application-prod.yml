@@ -1,0 +1,102 @@
+quarkus:
+  http:
+    port: ${HTTP_PORT:8080}
+    idle-timeout: 60s
+    read-timeout: 30s
+  
+  datasource:
+    db-kind: ${DB_KIND:postgresql}
+    jdbc:
+      url: ${DB_JDBC_URL}
+      max-size: ${DB_POOL_MAX_SIZE:20}
+      min-size: ${DB_POOL_MIN_SIZE:5}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  
+  hibernate-orm:
+    database:
+      generation: ${DB_GENERATION:validate}
+    sql-load-script: no-file
+  
+  oidc:
+    enabled: ${OIDC_ENABLED:true}
+    auth-server-url: ${KEYCLOAK_URL}
+    client-id: ${KEYCLOAK_CLIENT_ID}
+    credentials:
+      secret: ${KEYCLOAK_CLIENT_SECRET}
+  
+  security:
+    users:
+      embedded:
+        enabled: false
+  
+  log:
+    level: ${LOG_LEVEL:INFO}
+    console:
+      json: ${LOG_JSON:true}
+  
+  smallrye-health:
+    liveness-path: /q/health/live
+    readiness-path: /q/health/ready
+    startup-path: /q/health/started
+    health-ui:
+      always-include: false
+  
+  micrometer:
+    enabled: true
+    export:
+      prometheus:
+        enabled: true
+        path: /q/metrics
+  
+  mailer:
+    mock: false
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+  
+  swagger-ui:
+    always-include: false
+
+app:
+  environment: "production"
+  base-url: ${APP_BASE_URL}
+  instance-id: ${HOSTNAME:local}
+  
+  notification:
+    retry:
+      max-attempts: ${NOTIFICATION_RETRY_ATTEMPTS:5}
+      initial-delay: ${NOTIFICATION_RETRY_DELAY:5s}
+      max-delay: ${NOTIFICATION_RETRY_MAX_DELAY:30s}
+      jitter: 0.5
+    whatsapp:
+      enabled: ${WHATSAPP_ENABLED:false}
+      headless: true
+      mock: false
+      session-path: ${WHATSAPP_SESSION_PATH:/data/whatsapp-session}
+      timeout: 60s
+      max-retries: 5
+    email:
+      mock: false
+  
+  services:
+    workflow:
+      base-url: ${WORKFLOW_SERVICE_URL}
+      timeout: ${WORKFLOW_TIMEOUT:30s}
+    user:
+      base-url: ${USER_SERVICE_URL}
+      timeout: ${USER_TIMEOUT:10s}
+  
+  features:
+    mock-mode: false
+  
+  rate-limit:
+    enabled: true
+    max-requests: ${RATE_LIMIT_MAX_REQUESTS:500}
+    per-seconds: ${RATE_LIMIT_PER_SECONDS:60}
+  
+  audit:
+    enabled: true
+    log-requests: true
+    log-responses: false

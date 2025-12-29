@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<body>
+🔔 *NOTIFICAÇÃO DO SISTEMA*
+
+Olá {data.name},
+
+Você recebeu uma nova notificação do Apporte.
+
+📋 *INFORMAÇÕES:*
+• Tipo: {data.eventType}
+• Referência: {data.entityId}
+• Data: {data.date}
+• Descrição: {data.eventDescription}
+
+{#if data.context.urgency == 'HIGH'}
+🔴 *URGENTE:* Esta notificação requer atenção imediata.
+{#else if data.context.urgency == 'MEDIUM'}
+🟡 *IMPORTANTE:* Recomenda-se atenção prioritária.
+{#else}
+🔵 *INFORMATIVA:* Para seu conhecimento.
+{/if}
+
+🔗 *ACESSO AO SISTEMA:*
+{data.systemUrl}
+
+📱 *APP APPORTE:*
+Baixe nosso app para notificações em tempo real.
+
+✉️ *CONTATO:*
+suporte@apporte.com.br
+
+---
+_Esta é uma mensagem automática. Não responda esta mensagem._
+_© {data.date.year} Apporte Notification System._
+</body>
+</html>

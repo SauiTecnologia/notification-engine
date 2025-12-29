@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<body>
+🎉 *PROJETO CONCLUÍDO COM SUCESSO!*
+
+Parabéns, {data.name}!
+
+O projeto *{data.projectTitle}* foi concluído com sucesso.
+
+🏆 *RESUMO DA CONCLUSÃO:*
+• Projeto: {data.projectTitle}
+• ID: {data.projectId}
+• Data de Conclusão: {data.date}
+• Status Final: {data.finalStatus}
+• Avaliação: {#if data.rating}{data.rating}{#else}Não avaliado{/if}
+
+{#if data.feedback}
+📝 *FEEDBACK DOS AVALIADORES:*
+"{data.feedback}"
+{/if}
+
+{#if data.nextSteps}
+📈 *PRÓXIMOS PASSOS:*
+{data.nextSteps}
+{/if}
+
+🏅 *RECONHECIMENTO:*
+Agradecemos por sua dedicação e comprometimento com este projeto.
+
+🔗 *CERTIFICADO E RELATÓRIO:*
+{data.systemUrl}/projects/{data.projectId}/completion
+
+🎊 *COMEMORE!*
+Compartilhe esta conquista com sua equipe.
+
+---
+_Esta é uma mensagem automática do Apporte._
+_© {data.date.year} Apporte - Transformando Ideias em Realidade._
+</body>
+</html>
