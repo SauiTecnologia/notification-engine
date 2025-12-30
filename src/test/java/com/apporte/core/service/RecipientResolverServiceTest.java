@@ -8,12 +8,13 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.TestTransaction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.TestInstance;
 
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.time.Instant;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,32 +34,34 @@ public class RecipientResolverServiceTest {
         
         // Criar usuário admin
         User adminUser = new User();
-        adminUser.id = "user-123";
-        adminUser.email = "admin@apporte.com";
-        adminUser.name = "Administrador";
-        adminUser.rolesJson = "[\"admin\", \"notification-admin\"]";
-        adminUser.createdAt = Instant.now();
-        adminUser.lastSync = Instant.now();
+        adminUser.setId("user-123");
+        adminUser.setEmail("admin@apporte.com");
+        adminUser.setName("Administrador");
+        adminUser.setRolesJson("[\"admin\", \"notification-admin\"]");
+        adminUser.setCreatedAt(Instant.now());
+        adminUser.setLastSync(Instant.now());
         adminUser.persist();
         
         // Criar projeto
         Project project = new Project();
-        project.id = "proj-123";
-        project.ownerId = "user-123";
-        project.ownerEmail = "admin@apporte.com";
-        project.ownerName = "Administrador";
+        project.setId("proj-123");
+        project.setOwnerId("user-123");
+        project.setOwnerEmail("admin@apporte.com");
+        project.setOwnerName("Administrador");
         project.persist();
     }
     
     @Test
     @TestTransaction
     public void testResolveRecipients_ProjectOwner() {
-        WorkflowNotificationRequest request = new WorkflowNotificationRequest();
-        request.setEventType("PROJECT_READY_REVIEW");
-        request.setEntityId("proj-123");
-        request.setEntityType("project");
-        request.setRecipients(List.of("project_owner"));
-        request.setChannels(List.of("email"));
+        WorkflowNotificationRequest request = new WorkflowNotificationRequest(
+            "PROJECT_READY_REVIEW",
+            "project",
+            "proj-123",
+            List.of("email"),
+            List.of("project_owner"),
+            Map.of()
+        );
         
         List<RecipientResolution> recipients = recipientResolverService.resolveRecipients(request);
         
@@ -75,12 +78,14 @@ public class RecipientResolverServiceTest {
     @Test
     @TestTransaction
     public void testResolveRecipients_Admins() {
-        WorkflowNotificationRequest request = new WorkflowNotificationRequest();
-        request.setEventType("SYSTEM_ALERT");
-        request.setEntityId("system");
-        request.setEntityType("system");
-        request.setRecipients(List.of("admins"));
-        request.setChannels(List.of("email"));
+        WorkflowNotificationRequest request = new WorkflowNotificationRequest(
+            "SYSTEM_ALERT",
+            "system",
+            "system",
+            List.of("email"),
+            List.of("admins"),
+            Map.of()
+        );
         
         List<RecipientResolution> recipients = recipientResolverService.resolveRecipients(request);
         

@@ -5,31 +5,79 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.Objects;
 
+/**
+ * Entidade que representa um projeto para resolver proprietários em notificações.
+ * Mantém informações de proprietário em cache para performance.
+ */
 @Entity
 @Table(name = "projects")
 public class Project extends PanacheEntityBase {
     
     @Id
-    public String id;
+    private String id;
     
     @Column(name = "owner_id", nullable = false)
-    public String ownerId;
+    private String ownerId;
     
     @Column(name = "owner_email", nullable = false)
-    public String ownerEmail;
+    private String ownerEmail;
     
     @Column(name = "owner_name")
-    public String ownerName;
+    private String ownerName;
     
-    // Construtor padrão necessário
+    // Constructors
     public Project() {}
     
-    // Construtor conveniente
     public Project(String id, String ownerId, String ownerEmail, String ownerName) {
-        this.id = id;
-        this.ownerId = ownerId;
-        this.ownerEmail = ownerEmail;
+        this.id = Objects.requireNonNull(id, "id cannot be null");
+        this.ownerId = Objects.requireNonNull(ownerId, "ownerId cannot be null");
+        this.ownerEmail = Objects.requireNonNull(ownerEmail, "ownerEmail cannot be null");
         this.ownerName = ownerName;
+    }
+    
+    // Getters
+    public String getId() {
+        return id;
+    }
+    
+    public String getOwnerId() {
+        return ownerId;
+    }
+    
+    public String getOwnerEmail() {
+        return ownerEmail;
+    }
+    
+    public String getOwnerName() {
+        return ownerName;
+    }
+    
+    // Setters
+    public void setId(String id) {
+        this.id = Objects.requireNonNull(id, "id cannot be null");
+    }
+    
+    public void setOwnerId(String ownerId) {
+        this.ownerId = Objects.requireNonNull(ownerId, "ownerId cannot be null");
+    }
+    
+    public void setOwnerEmail(String ownerEmail) {
+        this.ownerEmail = Objects.requireNonNull(ownerEmail, "ownerEmail cannot be null");
+    }
+    
+    public void setOwnerName(String ownerName) {
+        this.ownerName = ownerName;
+    }
+    
+    @Override
+    public String toString() {
+        return "Project{" +
+                "id='" + id + '\'' +
+                ", ownerId='" + ownerId + '\'' +
+                ", ownerEmail='" + ownerEmail + '\'' +
+                ", ownerName='" + ownerName + '\'' +
+                '}';
     }
 }

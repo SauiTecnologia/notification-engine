@@ -3,66 +3,45 @@ package com.apporte.infrastructure.client.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * Record para resposta de token do Keycloak.
+ * Desserializa automaticamente de JSON com mapeamento de nomes de campos.
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class KeycloakTokenResponse {
-    
+public record KeycloakTokenResponse(
     @JsonProperty("access_token")
-    private String accessToken;
+    String accessToken,
     
     @JsonProperty("expires_in")
-    private Integer expiresIn;
+    Integer expiresIn,
     
     @JsonProperty("refresh_expires_in")
-    private Integer refreshExpiresIn;
+    Integer refreshExpiresIn,
     
     @JsonProperty("refresh_token")
-    private String refreshToken;
+    String refreshToken,
     
     @JsonProperty("token_type")
-    private String tokenType;
+    String tokenType,
     
     @JsonProperty("id_token")
-    private String idToken;
+    String idToken,
     
     @JsonProperty("not-before-policy")
-    private Integer notBeforePolicy;
+    Integer notBeforePolicy,
     
     @JsonProperty("session_state")
-    private String sessionState;
+    String sessionState,
     
     @JsonProperty("scope")
-    private String scope;
+    String scope
+) {
     
-    // Getters e Setters
-    public String getAccessToken() { return accessToken; }
-    public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
-    
-    public Integer getExpiresIn() { return expiresIn; }
-    public void setExpiresIn(Integer expiresIn) { this.expiresIn = expiresIn; }
-    
-    public Integer getRefreshExpiresIn() { return refreshExpiresIn; }
-    public void setRefreshExpiresIn(Integer refreshExpiresIn) { this.refreshExpiresIn = refreshExpiresIn; }
-    
-    public String getRefreshToken() { return refreshToken; }
-    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
-    
-    public String getTokenType() { return tokenType; }
-    public void setTokenType(String tokenType) { this.tokenType = tokenType; }
-    
-    public String getIdToken() { return idToken; }
-    public void setIdToken(String idToken) { this.idToken = idToken; }
-    
-    public Integer getNotBeforePolicy() { return notBeforePolicy; }
-    public void setNotBeforePolicy(Integer notBeforePolicy) { this.notBeforePolicy = notBeforePolicy; }
-    
-    public String getSessionState() { return sessionState; }
-    public void setSessionState(String sessionState) { this.sessionState = sessionState; }
-    
-    public String getScope() { return scope; }
-    public void setScope(String scope) { this.scope = scope; }
-    
-    // Helper method
+    /**
+     * Verifica se o token é válido e ativo.
+     */
     public boolean isValid() {
-        return accessToken != null && !accessToken.isEmpty() && expiresIn != null && expiresIn > 0;
+        return accessToken != null && !accessToken.isEmpty() && 
+               expiresIn != null && expiresIn > 0;
     }
 }

@@ -9,7 +9,6 @@ import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 import io.quarkus.qute.TemplateInstance;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,23 +20,25 @@ public class EmailService {
     
     private static final Logger LOG = LoggerFactory.getLogger(EmailService.class);
     
-    @Inject
-    Mailer mailer;
+    private final Mailer mailer;
+    private final Template projectReadyReview;
     
-    @Inject
-    @Location("emails/project-ready-review.html")
-    Template projectReadyReview;
+    public EmailService(Mailer mailer, 
+                       @Location("emails/project-ready-review.html") Template projectReadyReview) {
+        this.mailer = mailer;
+        this.projectReadyReview = projectReadyReview;
+    }
     
     public void sendEmail(RecipientResolution recipient, WorkflowNotificationRequest request) {
         try {
-            String subject = getEmailSubject(request.getEventType(), recipient.getName(), request.getEntityId());
+            String subject = getEmailSubject(request.eventType(), recipient.getName(), request.entityId());
             String htmlContent = renderEmailTemplate(recipient, request);
             
             Mail mail = Mail.withHtml(recipient.getEmail(), subject, htmlContent);
             mailer.send(mail);
             
             LOG.info("Email sent successfully to {} for event: {}", 
-                     recipient.getEmail(), request.getEventType());
+                     recipient.getEmail(), request.eventType());
             
         } catch (Exception e) {
             LOG.error("Failed to send email to {}: {}", 
@@ -66,17 +67,17 @@ public class EmailService {
         try {
             Map<String, Object> data = Map.of(
                 "nome", recipient.getName() != null ? recipient.getName() : "Colaborador",
-                "projectTitle", request.getContext() != null && request.getContext().containsKey("projectTitle") 
-                    ? request.getContext().get("projectTitle").toString() 
-                    : request.getEntityId(),
-                "fromColumn", request.getContext() != null && request.getContext().containsKey("fromColumn") 
-                    ? request.getContext().get("fromColumn").toString() 
+                "projectTitle", request.context() != null && request.context().containsKey("projectTitle") 
+                    ? request.context().get("projectTitle").toString() 
+                    : request.entityId(),
+                "fromColumn", request.context() != null && request.context().containsKey("fromColumn") 
+                    ? request.context().get("fromColumn").toString() 
                     : "Coluna Anterior",
-                "toColumn", request.getContext() != null && request.getContext().containsKey("toColumn") 
-                    ? request.getContext().get("toColumn").toString() 
+                "toColumn", request.context() != null && request.context().containsKey("toColumn") 
+                    ? request.context().get("toColumn").toString() 
                     : "Coluna Atual",
                 "projectUrl", System.getProperty("app.system.url", "https://app.apporte.com") + 
-                    "/projects/" + request.getEntityId(),
+                    "/projects/" + request.entityId(),
                 "year", LocalDateTime.now().getYear()
             );
             
@@ -95,8 +96,8 @@ public class EmailService {
                 "<p>Acesse o sistema para mais detalhes.</p>" +
                 "</body></html>",
                 recipient.getName() != null ? recipient.getName() : "Colaborador",
-                request.getEventType(),
-                request.getEntityId()
+                request.eventType(),
+                request.entityId()
             );
         }
     }

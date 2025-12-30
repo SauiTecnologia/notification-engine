@@ -5,7 +5,6 @@ import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 import io.quarkus.qute.TemplateInstance;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,50 +16,48 @@ public class WhatsAppTemplateService {
     private static final Logger LOG = LoggerFactory.getLogger(WhatsAppTemplateService.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     
-    @Inject
-    @Location("whatsapp/project_approval.html")
-    Template project_approval;
+    private final Template project_approval;
+    private final Template task_assignment;
+    private final Template deadline_reminder;
+    private final Template status_update;
+    private final Template project_completed;
+    private final Template default_template;
     
-    @Inject
-    @Location("whatsapp/task_assignment.html")
-    Template task_assignment;
-    
-    @Inject
-    @Location("whatsapp/deadline_reminder.html")
-    Template deadline_reminder;
-    
-    @Inject
-    @Location("whatsapp/status_update.html")
-    Template status_update;
-    
-    @Inject
-    @Location("whatsapp/project_completed.html")
-    Template project_completed;
-    
-    @Inject
-    @Location("whatsapp/default.html")
-    Template default_template;
+    public WhatsAppTemplateService(
+            @Location("whatsapp/project_approval.html") Template project_approval,
+            @Location("whatsapp/task_assignment.html") Template task_assignment,
+            @Location("whatsapp/deadline_reminder.html") Template deadline_reminder,
+            @Location("whatsapp/status_update.html") Template status_update,
+            @Location("whatsapp/project_completed.html") Template project_completed,
+            @Location("whatsapp/default.html") Template default_template) {
+        this.project_approval = project_approval;
+        this.task_assignment = task_assignment;
+        this.deadline_reminder = deadline_reminder;
+        this.status_update = status_update;
+        this.project_completed = project_completed;
+        this.default_template = default_template;
+    }
     
     public String renderTemplate(WhatsAppTemplateData data) {
         try {
             if (!data.isValid()) {
                 LOG.warn("Invalid template data received: name={}, eventType={}, entityId={}", 
-                        data.getName(), data.getEventType(), data.getEntityId());
+                        data.name(), data.eventType(), data.entityId());
                 return fallbackMessage(data);
             }
             
-            TemplateInstance template = selectTemplate(data.getEventType());
+            TemplateInstance template = selectTemplate(data.eventType());
             
             String rendered = template
                 .data("data", data)
-                .data("name", data.getName())
-                .data("eventType", data.getEventType())
-                .data("entityType", data.getEntityType())
-                .data("entityId", data.getEntityId())
-                .data("date", data.getDate().format(DATE_FORMATTER))
-                .data("year", data.getDate().getYear())
-                .data("systemUrl", data.getSystemUrl())
-                .data("context", data.getContext())
+                .data("name", data.name())
+                .data("eventType", data.eventType())
+                .data("entityType", data.entityType())
+                .data("entityId", data.entityId())
+                .data("date", data.date().format(DATE_FORMATTER))
+                .data("year", data.date().getYear())
+                .data("systemUrl", data.systemUrl())
+                .data("context", data.context())
                 .data("projectId", data.getProjectId())
                 .data("projectTitle", data.getProjectTitle())
                 .data("fromColumn", data.getFromColumn())
@@ -83,11 +80,11 @@ public class WhatsAppTemplateService {
                 .data("comments", data.getComments())
                 .render();
             
-            LOG.debug("Template rendered successfully for event type: {}", data.getEventType());
+            LOG.debug("Template rendered successfully for event type: {}", data.eventType());
             return cleanWhatsAppMessage(rendered);
             
         } catch (Exception e) {
-            LOG.error("Error rendering WhatsApp template for event type: {}", data.getEventType(), e);
+            LOG.error("Error rendering WhatsApp template for event type: {}", data.eventType(), e);
             return fallbackMessage(data);
         }
     }
@@ -170,11 +167,11 @@ public class WhatsAppTemplateService {
             "%s\n\n" +
             "---\n" +
             "Mensagem automatica - Apporte",
-            data.getName() != null ? data.getName() : "Usuario",
-            data.getEventType(),
-            data.getEntityId(),
-            data.getDate().format(DATE_FORMATTER),
-            data.getSystemUrl()
+            data.name() != null ? data.name() : "Usuario",
+            data.eventType(),
+            data.entityId(),
+            data.date().format(DATE_FORMATTER),
+            data.systemUrl()
         );
     }
     

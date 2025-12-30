@@ -35,33 +35,33 @@ public class NotificationControllerTest {
         
         // Criar usuário
         User user = new User();
-        user.id = "user-123";
-        user.email = "test@example.com";
-        user.name = "Test User";
-        user.createdAt = Instant.now();
-        user.lastSync = Instant.now();
+        user.setId("user-123");
+        user.setEmail("test@example.com");
+        user.setName("Test User");
+        user.setCreatedAt(Instant.now());
+        user.setLastSync(Instant.now());
         user.persist();
         
         // Criar projeto
         Project project = new Project();
-        project.id = "proj-123";
-        project.ownerId = "user-123";
-        project.ownerEmail = "test@example.com";
-        project.ownerName = "Test User";
+        project.setId("proj-123");
+        project.setOwnerId("user-123");
+        project.setOwnerEmail("test@example.com");
+        project.setOwnerName("Test User");
         project.persist();
         
         // Criar notificação
         Notification notification = new Notification();
-        notification.userId = "user-123";
-        notification.eventType = "PROJECT_READY_REVIEW";
-        notification.channel = "email";
-        notification.status = "sent";
-        notification.createdAt = Instant.now();
-        notification.sentAt = Instant.now();
-        notification.payloadJson = "{\"recipient\":{\"userId\":\"user-123\"}}";
+        notification.setUserId("user-123");
+        notification.setEventType("PROJECT_READY_REVIEW");
+        notification.setChannel("email");
+        notification.setStatus("sent");
+        notification.setCreatedAt(Instant.now());
+        notification.setSentAt(Instant.now());
+        notification.setPayloadJson("{\"recipient\":{\"userId\":\"user-123\"}}");
         notification.persist();
         
-        notificationId = notification.id;
+        notificationId = notification.getId();
     }
     
     @Test

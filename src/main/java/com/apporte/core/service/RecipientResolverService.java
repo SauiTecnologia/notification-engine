@@ -9,7 +9,6 @@ import com.apporte.core.repository.ProjectRepository;
 import com.apporte.infrastructure.client.dto.KeycloakUserResponse;
 import io.quarkus.cache.CacheResult;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,47 +20,50 @@ public class RecipientResolverService {
     
     private static final Logger LOG = LoggerFactory.getLogger(RecipientResolverService.class);
     
-    @Inject
-    UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final ProjectRepository projectRepository;
+    private final KeycloakService keycloakService;
     
-    @Inject
-    ProjectRepository projectRepository;
-    
-    @Inject
-    KeycloakService keycloakService;
+    public RecipientResolverService(UserRepository userRepository,
+                                   ProjectRepository projectRepository,
+                                   KeycloakService keycloakService) {
+        this.userRepository = userRepository;
+        this.projectRepository = projectRepository;
+        this.keycloakService = keycloakService;
+    }
     
     @CacheResult(cacheName = "recipients-cache")
     public List<RecipientResolution> resolveRecipients(WorkflowNotificationRequest request) {
         LOG.debug("Resolving recipients for event: {}, entity: {}", 
-                 request.getEventType(), request.getEntityId());
+                 request.eventType(), request.entityId());
         
         List<RecipientResolution> recipients = new ArrayList<>();
         
-        for (String recipientType : request.getRecipients()) {
+        for (String recipientType : request.recipients()) {
             LOG.debug("Processing recipient type: {}", recipientType);
             
             switch (recipientType) {
                 case "project_owner":
-                    recipients.addAll(resolveProjectOwner(request.getEntityId()));
+                    recipients.addAll(resolveProjectOwner(request.entityId()));
                     break;
                 case "admins":
                     recipients.addAll(resolveAdmins());
                     break;
                 case "workflow_participants":
-                    recipients.addAll(resolveWorkflowParticipants(request.getContext()));
+                    recipients.addAll(resolveWorkflowParticipants(request.context()));
                     break;
                 case "specific_users":
-                    recipients.addAll(resolveSpecificUsers(request.getContext()));
+                    recipients.addAll(resolveSpecificUsers(request.context()));
                     break;
                 case "manual":
-                    recipients.addAll(resolveManualRecipient(request.getEntityId(), request.getContext()));
+                    recipients.addAll(resolveManualRecipient(request.entityId(), request.context()));
                     break;
                 default:
                     LOG.warn("Unknown recipient type: {}", recipientType);
             }
         }
         
-        LOG.info("Resolved {} total recipients for event {}", recipients.size(), request.getEventType());
+        LOG.info("Resolved {} total recipients for event {}", recipients.size(), request.eventType());
         return recipients;
     }
     
@@ -79,16 +81,16 @@ public class RecipientResolverService {
             
             Project project = projectOpt.get();
             LOG.debug("Found project owner: id={}, email={}, name={}", 
-                     project.ownerId, project.ownerEmail, project.ownerName);
+                     project.getOwnerId(), project.getOwnerEmail(), project.getOwnerName());
             
             // Buscar ou criar cache do usuário
-            User user = getOrCreateUser(project.ownerId, project.ownerEmail, project.ownerName);
+            User user = getOrCreateUser(project.getOwnerId(), project.getOwnerEmail(), project.getOwnerName());
             
             RecipientResolution rr = new RecipientResolution();
-            rr.setUserId(project.ownerId);
-            rr.setEmail(user.email);
-            rr.setName(user.name);
-            rr.setPhone(user.phone);
+            rr.setUserId(project.getOwnerId());
+            rr.setEmail(user.getEmail());
+            rr.setName(user.getName());
+            rr.setPhone(user.getPhone());
             rr.setRecipientType("project_owner");
             rr.setMetadata(Map.of("project_id", projectId));
             
@@ -111,10 +113,10 @@ public class RecipientResolverService {
             
             for (User user : adminUsers) {
                 RecipientResolution rr = new RecipientResolution();
-                rr.setUserId(user.id);
-                rr.setEmail(user.email);
-                rr.setName(user.name);
-                rr.setPhone(user.phone);
+                rr.setUserId(user.getId());
+                rr.setEmail(user.getEmail());
+                rr.setName(user.getName());
+                rr.setPhone(user.getPhone());
                 rr.setRecipientType("admin");
                 rr.setMetadata(Map.of("role", "admin"));
                 
@@ -139,9 +141,9 @@ public class RecipientResolverService {
         
         RecipientResolution rr = new RecipientResolution();
         rr.setUserId("admin-001");
-        rr.setEmail(adminUser.email);
-        rr.setName(adminUser.name);
-        rr.setPhone(adminUser.phone);
+        rr.setEmail(adminUser.getEmail());
+        rr.setName(adminUser.getName());
+        rr.setPhone(adminUser.getPhone());
         rr.setRecipientType("admin");
         rr.setMetadata(Map.of("role", "admin", "source", "fallback"));
         
@@ -170,10 +172,10 @@ public class RecipientResolverService {
                         User user = userOpt.get();
                         
                         RecipientResolution rr = new RecipientResolution();
-                        rr.setUserId(user.id);
-                        rr.setEmail(user.email);
-                        rr.setName(user.name);
-                        rr.setPhone(user.phone);
+                        rr.setUserId(user.getId());
+                        rr.setEmail(user.getEmail());
+                        rr.setName(user.getName());
+                        rr.setPhone(user.getPhone());
                         rr.setRecipientType("workflow_participant");
                         rr.setMetadata(Map.of(
                             "context", "workflow",
@@ -214,10 +216,10 @@ public class RecipientResolverService {
                         User user = userOpt.get();
                         
                         RecipientResolution rr = new RecipientResolution();
-                        rr.setUserId(user.id);
-                        rr.setEmail(user.email);
-                        rr.setName(user.name);
-                        rr.setPhone(user.phone);
+                        rr.setUserId(user.getId());
+                        rr.setEmail(user.getEmail());
+                        rr.setName(user.getName());
+                        rr.setPhone(user.getPhone());
                         rr.setRecipientType("specific_user");
                         rr.setMetadata(Map.of(
                             "source", "database",
@@ -249,10 +251,10 @@ public class RecipientResolverService {
                 User user = userOpt.get();
                 
                 RecipientResolution rr = new RecipientResolution();
-                rr.setUserId(user.id);
-                rr.setEmail(user.email);
-                rr.setName(user.name);
-                rr.setPhone(user.phone);
+                rr.setUserId(user.getId());
+                rr.setEmail(user.getEmail());
+                rr.setName(user.getName());
+                rr.setPhone(user.getPhone());
                 rr.setRecipientType("manual");
                 rr.setMetadata(Map.of(
                     "source", "database",
@@ -322,7 +324,7 @@ public class RecipientResolverService {
         if (existing.isPresent()) {
             User user = existing.get();
             // Atualizar se necessário (cache de 1 hora)
-            if (user.lastSync.isBefore(Instant.now().minusSeconds(3600))) {
+            if (user.getLastSync().isBefore(Instant.now().minusSeconds(3600))) {
                 updateUserFromKeycloak(user, keycloakId, fallbackEmail, fallbackName);
             }
             return user;
@@ -338,29 +340,29 @@ public class RecipientResolverService {
         
         if (keycloakUser.isPresent()) {
             KeycloakUserResponse kcUser = keycloakUser.get();
-            user.email = kcUser.getEmail() != null ? kcUser.getEmail() : fallbackEmail;
-            user.name = kcUser.getFullName() != null ? kcUser.getFullName() : fallbackName;
-            user.phone = kcUser.getPhoneNumber();
+            user.setEmail(kcUser.email() != null ? kcUser.email() : fallbackEmail);
+            user.setName(kcUser.getFullName() != null ? kcUser.getFullName() : fallbackName);
+            user.setPhone(kcUser.getPhoneNumber());
             
             // Atualizar roles se disponível
-            if (kcUser.getRealmRoles() != null && !kcUser.getRealmRoles().isEmpty()) {
+            if (kcUser.realmRoles() != null && !kcUser.realmRoles().isEmpty()) {
                 try {
-                    String rolesJson = "[\"" + String.join("\",\"", kcUser.getRealmRoles()) + "\"]";
-                    user.rolesJson = rolesJson;
+                    String rolesJson = "[\"" + String.join("\",\"", kcUser.realmRoles()) + "\"]";
+                    user.setRolesJson(rolesJson);
                 } catch (Exception e) {
                     LOG.warn("Failed to serialize roles for user {}: {}", keycloakId, e.getMessage());
                 }
             }
         } else {
             // Usar fallback se Keycloak não responder
-            user.email = fallbackEmail;
-            user.name = fallbackName;
+            user.setEmail(fallbackEmail);
+            user.setName(fallbackName);
             LOG.warn("Could not fetch user {} from Keycloak, using fallback data", keycloakId);
         }
         
-        user.lastSync = Instant.now();
+        user.setLastSync(Instant.now());
         userRepository.persist(user);
-        LOG.debug("User updated: {} <{}>", user.name, user.email);
+        LOG.debug("User updated: {} <{}>", user.getName(), user.getEmail());
     }
     
     private User createUserFromKeycloak(String keycloakId, String fallbackEmail, String fallbackName) {
@@ -369,33 +371,33 @@ public class RecipientResolverService {
         Optional<KeycloakUserResponse> keycloakUser = keycloakService.getUserById(keycloakId);
         
         User user = new User();
-        user.id = keycloakId;
+        user.setId(keycloakId);
         
         if (keycloakUser.isPresent()) {
             KeycloakUserResponse kcUser = keycloakUser.get();
-            user.email = kcUser.getEmail() != null ? kcUser.getEmail() : fallbackEmail;
-            user.name = kcUser.getFullName() != null ? kcUser.getFullName() : fallbackName;
-            user.phone = kcUser.getPhoneNumber();
+            user.setEmail(kcUser.email() != null ? kcUser.email() : fallbackEmail);
+            user.setName(kcUser.getFullName() != null ? kcUser.getFullName() : fallbackName);
+            user.setPhone(kcUser.getPhoneNumber());
             
-            if (kcUser.getRealmRoles() != null && !kcUser.getRealmRoles().isEmpty()) {
+            if (kcUser.realmRoles() != null && !kcUser.realmRoles().isEmpty()) {
                 try {
-                    String rolesJson = "[\"" + String.join("\",\"", kcUser.getRealmRoles()) + "\"]";
-                    user.rolesJson = rolesJson;
+                    String rolesJson = "[\"" + String.join("\",\"", kcUser.realmRoles()) + "\"]";
+                    user.setRolesJson(rolesJson);
                 } catch (Exception e) {
                     LOG.warn("Failed to serialize roles for new user {}: {}", keycloakId, e.getMessage());
                 }
             }
             
-            LOG.debug("Created user from Keycloak: {} <{}>", user.name, user.email);
+            LOG.debug("Created user from Keycloak: {} <{}>", user.getName(), user.getEmail());
         } else {
             // Criar com dados básicos se Keycloak não responder
-            user.email = fallbackEmail;
-            user.name = fallbackName;
+            user.setEmail(fallbackEmail);
+            user.setName(fallbackName);
             LOG.info("Created user with fallback data: {} <{}>", fallbackName, fallbackEmail);
         }
         
-        user.createdAt = Instant.now();
-        user.lastSync = Instant.now();
+        user.setCreatedAt(Instant.now());
+        user.setLastSync(Instant.now());
         
         userRepository.persist(user);
         return user;

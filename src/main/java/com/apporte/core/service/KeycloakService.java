@@ -22,20 +22,24 @@ public class KeycloakService {
     
     private static final Logger LOG = LoggerFactory.getLogger(KeycloakService.class);
     
-    @ConfigProperty(name = "app.keycloak.admin.server-url")
-    String keycloakAdminUrl;
-    
-    @ConfigProperty(name = "app.keycloak.admin.username")
-    String adminUsername;
-    
-    @ConfigProperty(name = "app.keycloak.admin.password")
-    String adminPassword;
-    
-    @ConfigProperty(name = "app.keycloak.admin.client-id", defaultValue = "admin-cli")
-    String clientId;
+    private final String keycloakAdminUrl;
+    private final String adminUsername;
+    private final String adminPassword;
+    private final String clientId;
     
     private KeycloakTokenResponse cachedToken;
     private long tokenExpiry;
+    
+    public KeycloakService(
+            @ConfigProperty(name = "app.keycloak.admin.server-url") String keycloakAdminUrl,
+            @ConfigProperty(name = "app.keycloak.admin.username") String adminUsername,
+            @ConfigProperty(name = "app.keycloak.admin.password") String adminPassword,
+            @ConfigProperty(name = "app.keycloak.admin.client-id", defaultValue = "admin-cli") String clientId) {
+        this.keycloakAdminUrl = keycloakAdminUrl;
+        this.adminUsername = adminUsername;
+        this.adminPassword = adminPassword;
+        this.clientId = clientId;
+    }
     
     public Optional<KeycloakUserResponse> getUserById(String userId) {
         String token = getAdminToken();
@@ -66,7 +70,7 @@ public class KeycloakService {
     
     public Optional<String> getUserEmail(String userId) {
         return getUserById(userId)
-                .map(KeycloakUserResponse::getEmail);
+                .map(kcUser -> kcUser.email());
     }
     
     public Optional<String> getUserPhone(String userId) {
@@ -93,7 +97,7 @@ public class KeycloakService {
     private String getAdminToken() {
         // Cache do token por 5 minutos
         if (cachedToken != null && cachedToken.isValid() && System.currentTimeMillis() < tokenExpiry) {
-            return cachedToken.getAccessToken();
+            return cachedToken.accessToken();
         }
         
         try (Client client = ClientBuilder.newClient()) {
@@ -115,8 +119,8 @@ public class KeycloakService {
                     cachedToken = tokenResponse;
                     // Calcular expiração (menos 1 minuto para margem de segurança)
                     tokenExpiry = System.currentTimeMillis() + 
-                                 (tokenResponse.getExpiresIn() * 1000L) - 60000;
-                    return cachedToken.getAccessToken();
+                                 (tokenResponse.expiresIn() * 1000L) - 60000;
+                    return cachedToken.accessToken();
                 } else {
                     LOG.error("Invalid token response from Keycloak");
                 }

@@ -15,12 +15,12 @@ public class ProjectRepository implements PanacheRepository<Project> {
     public Optional<String> findProjectOwnerId(String projectId) {
         return find("id", projectId)
                 .firstResultOptional()
-                .map(project -> project.ownerId);
+                .map(project -> project.getOwnerId());
     }
     
     public Optional<String> findProjectOwnerEmail(String projectId) {
         return find("id", projectId)
                 .firstResultOptional()
-                .map(project -> project.ownerEmail);
+                .map(project -> project.getOwnerEmail());
     }
 }

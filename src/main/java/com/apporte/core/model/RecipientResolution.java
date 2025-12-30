@@ -1,8 +1,14 @@
 package com.apporte.core.model;
 
 import java.util.Map;
+import java.util.Objects;
 
+/**
+ * Representa um destinatário resolvido para receber uma notificação.
+ * Contém todas as informações necessárias para enviar mensagens via diferentes canais.
+ */
 public class RecipientResolution {
+    
     private String userId;
     private String email;
     private String phone;
@@ -10,24 +16,65 @@ public class RecipientResolution {
     private String recipientType; // project_owner, evaluator, admin, workflow_participant, etc.
     private Map<String, Object> metadata;
     
-    // Getters e Setters
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    // Constructor
+    public RecipientResolution() {}
     
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public RecipientResolution(String userId, String email, String name, String recipientType) {
+        this.userId = Objects.requireNonNull(userId, "userId cannot be null");
+        this.email = Objects.requireNonNull(email, "email cannot be null");
+        this.name = name;
+        this.recipientType = Objects.requireNonNull(recipientType, "recipientType cannot be null");
+    }
     
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
+    // Getters
+    public String getUserId() { 
+        return userId; 
+    }
     
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getEmail() { 
+        return email; 
+    }
     
-    public String getRecipientType() { return recipientType; }
-    public void setRecipientType(String recipientType) { this.recipientType = recipientType; }
+    public String getPhone() { 
+        return phone; 
+    }
     
-    public Map<String, Object> getMetadata() { return metadata; }
-    public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
+    public String getName() { 
+        return name; 
+    }
+    
+    public String getRecipientType() { 
+        return recipientType; 
+    }
+    
+    public Map<String, Object> getMetadata() { 
+        return metadata; 
+    }
+    
+    // Setters with validation
+    public void setUserId(String userId) { 
+        this.userId = Objects.requireNonNull(userId, "userId cannot be null");
+    }
+    
+    public void setEmail(String email) { 
+        this.email = Objects.requireNonNull(email, "email cannot be null");
+    }
+    
+    public void setPhone(String phone) { 
+        this.phone = phone;
+    }
+    
+    public void setName(String name) { 
+        this.name = name;
+    }
+    
+    public void setRecipientType(String recipientType) { 
+        this.recipientType = Objects.requireNonNull(recipientType, "recipientType cannot be null");
+    }
+    
+    public void setMetadata(Map<String, Object> metadata) { 
+        this.metadata = metadata;
+    }
     
     // Helper methods
     public boolean hasPhone() {
@@ -38,8 +85,27 @@ public class RecipientResolution {
         return email != null && !email.trim().isEmpty();
     }
     
+    public boolean isValid() {
+        return userId != null && email != null && recipientType != null;
+    }
+    
     @Override
     public String toString() {
-        return String.format("Recipient[%s, %s, %s]", name, email, recipientType);
+        return String.format("Recipient[userId=%s, name=%s, email=%s, recipientType=%s]", 
+                            userId, name, email, recipientType);
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof RecipientResolution that)) return false;
+        return Objects.equals(userId, that.userId) &&
+               Objects.equals(email, that.email) &&
+               Objects.equals(recipientType, that.recipientType);
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(userId, email, recipientType);
     }
 }

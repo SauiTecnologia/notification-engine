@@ -1,9 +1,9 @@
 package com.apporte.api;
 
 import com.apporte.api.dto.*;
+import com.apporte.api.util.ResponseBuilder;
+import com.apporte.core.model.Notification;
 import com.apporte.core.service.NotificationService;
-import com.apporte.core.repository.NotificationRepository;
-import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -11,11 +11,12 @@ import jakarta.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
+/**
+ * API REST para gerenciamento de notificações.
+ * Responsável por receber requisições e coordenar o envio de notificações.
+ */
 @Path("/api/notifications")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -23,171 +24,150 @@ public class NotificationController {
     
     private static final Logger LOG = LoggerFactory.getLogger(NotificationController.class);
     
-    @Inject
-    NotificationService notificationService;
+    private final NotificationService notificationService;
     
-    @Inject
-    NotificationRepository notificationRepository;
+    public NotificationController(NotificationService notificationService) {
+        this.notificationService = Objects.requireNonNull(notificationService, "notificationService cannot be null");
+    }
     
     @GET
     public Response healthCheck() {
-        return Response.ok(Map.of(
+        return ResponseBuilder.ok(Map.of(
             "message", "Notification Engine is running!",
             "status", "healthy",
             "timestamp", System.currentTimeMillis()
-        )).build();
+        ));
     }
     
     @POST
     @Path("/from-workflow")
     public Response processWorkflowNotification(@Valid WorkflowNotificationRequest request) {
-        LOG.info("Received workflow notification: {}", request.getEventType());
+        LOG.info("Received workflow notification: {}", request.eventType());
+        String requestId = ResponseBuilder.generateRequestId();
         
         try {
-            // O NotificationService espera o core.model.WorkflowNotificationRequest
-            // Precisamos converter ou atualizar o service
             notificationService.processWorkflowNotification(request);
             
-            return Response.accepted(new NotificationResponse(
+            return ResponseBuilder.accepted(
                 "accepted",
                 "Workflow notification processing started",
                 Map.of(
-                    "eventType", request.getEventType(),
-                    "entityId", request.getEntityId(),
-                    "requestId", UUID.randomUUID().toString()
+                    "eventType", request.eventType(),
+                    "entityId", request.entityId(),
+                    "requestId", requestId
                 )
-            )).build();
+            );
+            
+        } catch (IllegalArgumentException e) {
+            LOG.warn("Invalid workflow notification request: {}", e.getMessage());
+            return ResponseBuilder.badRequest(e.getMessage());
             
         } catch (Exception e) {
-            LOG.error("Error processing workflow notification", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                          .entity(new NotificationResponse(
-                              "error",
-                              "Failed to process workflow notification: " + e.getMessage(),
-                              null
-                          ))
-                          .build();
+            LOG.error("Error processing workflow notification: {}", e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Failed to process notification", e);
         }
     }
     
     @POST
     @Path("/send")
     public Response sendNotification(@Valid SimpleNotificationRequest request) {
-        LOG.info("Manual notification: {} to {}", request.getEventType(), request.getRecipientId());
+        LOG.info("Manual notification: {} to {}", request.eventType(), request.recipientId());
+        String requestId = ResponseBuilder.generateRequestId();
         
         try {
-            // Converter para WorkflowNotificationRequest
-            WorkflowNotificationRequest workflowRequest = new WorkflowNotificationRequest();
-            workflowRequest.setEventType(request.getEventType());
-            workflowRequest.setEntityType("user");
-            workflowRequest.setEntityId(request.getRecipientId());
-            workflowRequest.setChannels(List.of(request.getChannel()));
-            workflowRequest.setRecipients(List.of("manual"));
-            workflowRequest.setContext(request.getContext());
-            
+            WorkflowNotificationRequest workflowRequest = convertToWorkflowRequest(request);
             notificationService.processWorkflowNotification(workflowRequest);
             
-            return Response.accepted(new NotificationResponse(
+            return ResponseBuilder.accepted(
                 "accepted",
                 "Notification accepted for processing",
                 Map.of(
-                    "eventType", request.getEventType(),
-                    "recipientId", request.getRecipientId(),
-                    "requestId", UUID.randomUUID().toString()
+                    "eventType", request.eventType(),
+                    "recipientId", request.recipientId(),
+                    "requestId", requestId
                 )
-            )).build();
+            );
+            
+        } catch (IllegalArgumentException e) {
+            LOG.warn("Invalid notification request: {}", e.getMessage());
+            return ResponseBuilder.badRequest(e.getMessage());
             
         } catch (Exception e) {
-            LOG.error("Error sending notification", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                          .entity(new NotificationResponse(
-                              "error",
-                              "Failed to send notification: " + e.getMessage(),
-                              null
-                          ))
-                          .build();
+            LOG.error("Error sending notification: {}", e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Failed to send notification", e);
         }
     }
     
     @POST
     @Path("/batch")
     public Response sendBatchNotifications(@Valid BatchNotificationRequest batchRequest) {
-        LOG.info("Batch notification with {} items", batchRequest.getNotifications().size());
+        LOG.info("Batch notification with {} items", batchRequest.notifications().size());
+        
+        if (batchRequest.notifications().isEmpty()) {
+            return ResponseBuilder.badRequest("Batch cannot be empty");
+        }
         
         int successCount = 0;
         int errorCount = 0;
-        var results = new java.util.ArrayList<Map<String, Object>>();
+        var results = new ArrayList<Map<String, Object>>();
         
-        for (var request : batchRequest.getNotifications()) {
+        for (var request : batchRequest.notifications()) {
             try {
-                WorkflowNotificationRequest workflowRequest = new WorkflowNotificationRequest();
-                workflowRequest.setEventType(request.getEventType());
-                workflowRequest.setEntityType("user");
-                workflowRequest.setEntityId(request.getRecipientId());
-                workflowRequest.setChannels(List.of(request.getChannel()));
-                workflowRequest.setRecipients(List.of("manual"));
-                workflowRequest.setContext(request.getContext());
-                
+                WorkflowNotificationRequest workflowRequest = convertToWorkflowRequest(request);
                 notificationService.processWorkflowNotification(workflowRequest);
                 successCount++;
                 
                 results.add(Map.of(
-                    "eventType", request.getEventType(),
-                    "recipientId", request.getRecipientId(),
+                    "eventType", request.eventType(),
+                    "recipientId", request.recipientId(),
                     "status", "success"
                 ));
+                
             } catch (Exception e) {
                 errorCount++;
+                LOG.warn("Error processing batch item: {}", e.getMessage());
                 results.add(Map.of(
-                    "eventType", request.getEventType(),
-                    "recipientId", request.getRecipientId(),
+                    "eventType", request.eventType(),
+                    "recipientId", request.recipientId(),
                     "status", "error",
                     "error", e.getMessage()
                 ));
             }
         }
         
-        return Response.ok(new NotificationResponse(
-            "batch_processed",
-            String.format("Processed %d notifications: %d success, %d errors", 
-                         batchRequest.getNotifications().size(), successCount, errorCount),
-            Map.of(
-                "total", batchRequest.getNotifications().size(),
+        return ResponseBuilder.ok(Map.of(
+            "status", "batch_processed",
+            "message", String.format("Processed %d notifications: %d success, %d errors",
+                    batchRequest.notifications().size(), successCount, errorCount),
+            "data", Map.of(
+                "total", batchRequest.notifications().size(),
                 "success", successCount,
                 "errors", errorCount,
                 "results", results
             )
-        )).build();
+        ));
     }
     
     @GET
     @Path("/status/{id}")
     public Response getNotificationStatus(@PathParam("id") String id) {
         try {
-            // Tenta encontrar por ID (pode ser UUID ou Long)
-            var notification = findNotificationById(id);
-            
-            if (notification == null) {
-                return Response.status(Response.Status.NOT_FOUND)
-                              .entity(new NotificationResponse(
-                                  "error",
-                                  "Notification not found: " + id,
-                                  Map.of("id", id)
-                              ))
-                              .build();
+            Long notificationId = parseId(id);
+            if (notificationId == null) {
+                return ResponseBuilder.badRequest("Invalid notification ID format");
             }
             
-            return Response.ok(createStatusResponse(notification)).build();
+            Notification notification = notificationService.findNotificationById(notificationId);
+            
+            if (notification == null) {
+                return ResponseBuilder.notFound("Notification not found: " + id);
+            }
+            
+            return ResponseBuilder.ok(buildNotificationStatusResponse(notification));
             
         } catch (Exception e) {
-            LOG.error("Error getting notification status", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                          .entity(new NotificationResponse(
-                              "error",
-                              "Error retrieving notification: " + e.getMessage(),
-                              null
-                          ))
-                          .build();
+            LOG.error("Error getting notification status: {}", e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Error retrieving notification", e);
         }
     }
     
@@ -198,54 +178,78 @@ public class NotificationController {
             @QueryParam("status") String status,
             @QueryParam("limit") @DefaultValue("20") int limit) {
         
-        var query = "userId = :userId";
-        Map<String, Object> params = new HashMap<>();
-        params.put("userId", userId);
+        Objects.requireNonNull(userId, "userId cannot be null");
         
-        if (status != null && !status.isEmpty()) {
-            query += " and status = :status";
-            params.put("status", status);
+        if (limit <= 0 || limit > 100) {
+            return ResponseBuilder.badRequest("Limit must be between 1 and 100");
         }
         
-        var notifications = notificationRepository.find(query, params)
-                .range(0, limit)
-                .list();
-        
-        return Response.ok(Map.of(
-            "userId", userId,
-            "notifications", notifications,
-            "count", notifications.size()
-        )).build();
-    }
-    
-    // Métodos auxiliares
-    private com.apporte.core.model.Notification findNotificationById(String id) {
         try {
-            // Tenta como Long primeiro
-            Long longId = Long.parseLong(id);
-            return notificationRepository.findById(longId);
-        } catch (NumberFormatException e1) {
-            try {
-                // Tenta como UUID
-                UUID uuid = UUID.fromString(id);
-                return notificationRepository.find("uuid", uuid).firstResult();
-            } catch (IllegalArgumentException e2) {
-                return null;
-            }
+            List<Notification> notifications = notificationService.getUserNotifications(userId, status, limit);
+            
+            return ResponseBuilder.ok(Map.of(
+                "userId", userId,
+                "status", status != null ? status : "all",
+                "notifications", notifications,
+                "count", notifications.size()
+            ));
+            
+        } catch (Exception e) {
+            LOG.error("Error getting user notifications: {}", e.getMessage(), e);
+            return ResponseBuilder.internalServerError("Error retrieving notifications", e);
         }
     }
     
-    private Map<String, Object> createStatusResponse(com.apporte.core.model.Notification notification) {
-        Map<String, Object> status = new HashMap<>();
-        status.put("id", notification.id);
-        status.put("eventType", notification.eventType);
-        status.put("channel", notification.channel);
-        status.put("userId", notification.userId);
-        status.put("status", notification.status);
-        status.put("createdAt", notification.createdAt);
-        status.put("sentAt", notification.sentAt);
-        status.put("errorMessage", notification.errorMessage);
+    // ========== Métodos auxiliares privados ==========
+    
+    /**
+     * Converte SimpleNotificationRequest para WorkflowNotificationRequest.
+     */
+    private WorkflowNotificationRequest convertToWorkflowRequest(SimpleNotificationRequest request) {
+        Objects.requireNonNull(request, "request cannot be null");
+        Objects.requireNonNull(request.recipientId(), "recipientId cannot be null");
+        Objects.requireNonNull(request.channel(), "channel cannot be null");
+        Objects.requireNonNull(request.eventType(), "eventType cannot be null");
         
-        return status;
+        return new WorkflowNotificationRequest(
+            request.eventType(),
+            "user",
+            request.recipientId(),
+            List.of(request.channel()),
+            List.of("manual"),
+            request.context()
+        );
+    }
+    
+    /**
+     * Parsa String como Long, retornando null se inválido.
+     */
+    private Long parseId(String id) {
+        if (id == null || id.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            return Long.parseLong(id);
+        } catch (NumberFormatException e) {
+            LOG.debug("Invalid ID format: {}", id);
+            return null;
+        }
+    }
+    
+    /**
+     * Constrói resposta com status da notificação.
+     */
+    private Map<String, Object> buildNotificationStatusResponse(Notification notification) {
+        return Map.of(
+            "id", notification.getId(),
+            "eventType", notification.getEventType(),
+            "channel", notification.getChannel(),
+            "userId", notification.getUserId(),
+            "status", notification.getStatus(),
+            "createdAt", notification.getCreatedAt(),
+            "sentAt", notification.getSentAt(),
+            "errorMessage", notification.getErrorMessage() != null ? notification.getErrorMessage() : ""
+        );
     }
 }

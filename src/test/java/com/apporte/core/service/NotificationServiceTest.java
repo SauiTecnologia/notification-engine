@@ -33,20 +33,19 @@ public class NotificationServiceTest {
     NotificationRepository notificationRepository;
 
     private WorkflowNotificationRequest createTestRequest() {
-        WorkflowNotificationRequest request = new WorkflowNotificationRequest();
-        request.setEventType("PROJECT_READY_REVIEW");
-        request.setEntityType("project");
-        request.setEntityId("proj-123");
-        request.setChannels(Arrays.asList("email", "whatsapp"));
-        request.setRecipients(Arrays.asList("project_owner", "evaluators"));
-        
         Map<String, Object> context = new HashMap<>();
         context.put("projectTitle", "Meu Projeto");
         context.put("fromColumn", "Em Análise");
         context.put("toColumn", "Pronto para Revisão");
-        request.setContext(context);
         
-        return request;
+        return new WorkflowNotificationRequest(
+            "PROJECT_READY_REVIEW",
+            "project",
+            "proj-123",
+            Arrays.asList("email", "whatsapp"),
+            Arrays.asList("project_owner", "evaluators"),
+            context
+        );
     }
 
     private RecipientResolution createTestRecipient() {
@@ -91,8 +90,19 @@ public class NotificationServiceTest {
     @Test
     public void testProcessWorkflowNotification_SingleChannel() {
         // Arrange
-        WorkflowNotificationRequest request = createTestRequest();
-        request.setChannels(Arrays.asList("email")); // Apenas email
+        Map<String, Object> context = new HashMap<>();
+        context.put("projectTitle", "Meu Projeto");
+        context.put("fromColumn", "Em Análise");
+        context.put("toColumn", "Pronto para Revisão");
+        
+        WorkflowNotificationRequest request = new WorkflowNotificationRequest(
+            "PROJECT_READY_REVIEW",
+            "project",
+            "proj-123",
+            Arrays.asList("email"),
+            Arrays.asList("project_owner", "evaluators"),
+            context
+        );
         
         // Act
         notificationService.processWorkflowNotification(request);

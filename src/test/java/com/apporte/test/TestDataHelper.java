@@ -1,12 +1,15 @@
 package com.apporte.test;
 
 import com.apporte.core.model.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 public class TestDataHelper {
+    
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     
     /**
      * Limpa todos os dados de teste
@@ -32,11 +35,11 @@ public class TestDataHelper {
     @Transactional
     public static User createTestUser(String userId, String email, String name, String... roles) {
         User user = new User();
-        user.id = userId;
-        user.email = email;
-        user.name = name;
-        user.createdAt = Instant.now();
-        user.lastSync = Instant.now();
+        user.setId(userId);
+        user.setEmail(email);
+        user.setName(name);
+        user.setCreatedAt(Instant.now());
+        user.setLastSync(Instant.now());
         
         if (roles != null && roles.length > 0) {
             StringBuilder rolesJson = new StringBuilder("[");
@@ -45,7 +48,7 @@ public class TestDataHelper {
                 rolesJson.append("\"").append(roles[i]).append("\"");
             }
             rolesJson.append("]");
-            user.rolesJson = rolesJson.toString();
+            user.setRolesJson(rolesJson.toString());
         }
         
         user.persist();
@@ -59,10 +62,10 @@ public class TestDataHelper {
     public static Project createTestProject(String projectId, String ownerId, 
                                            String ownerEmail, String ownerName) {
         Project project = new Project();
-        project.id = projectId;
-        project.ownerId = ownerId;
-        project.ownerEmail = ownerEmail;
-        project.ownerName = ownerName;
+        project.setId(projectId);
+        project.setOwnerId(ownerId);
+        project.setOwnerEmail(ownerEmail);
+        project.setOwnerName(ownerName);
         project.persist();
         return project;
     }
@@ -74,21 +77,21 @@ public class TestDataHelper {
     public static Notification createTestNotification(String userId, String eventType, 
                                                      String channel, String status) {
         Notification notification = new Notification();
-        notification.userId = userId;
-        notification.eventType = eventType;
-        notification.channel = channel;
-        notification.status = status;
-        notification.createdAt = Instant.now();
+        notification.setUserId(userId);
+        notification.setEventType(eventType);
+        notification.setChannel(channel);
+        notification.setStatus(status);
+        notification.setCreatedAt(Instant.now());
         
         if ("sent".equals(status)) {
-            notification.sentAt = Instant.now();
+            notification.setSentAt(Instant.now());
         }
         
         if ("error".equals(status)) {
-            notification.errorMessage = "Test error message";
+            notification.setErrorMessage("Test error message");
         }
         
-        notification.payloadJson = createTestPayload(userId, eventType, channel);
+        notification.setPayloadJson(createTestPayload(userId, eventType, channel));
         notification.persist();
         
         return notification;
@@ -101,13 +104,13 @@ public class TestDataHelper {
     public static Notification createErrorNotificationForRetry(String userId, String eventType, 
                                                               String channel) {
         Notification notification = new Notification();
-        notification.userId = userId;
-        notification.eventType = eventType;
-        notification.channel = channel;
-        notification.status = "error";
-        notification.createdAt = Instant.now().minusSeconds(300); // 5 minutos atrás
-        notification.errorMessage = "SMTP connection failed";
-        notification.payloadJson = createTestPayload(userId, eventType, channel);
+        notification.setUserId(userId);
+        notification.setEventType(eventType);
+        notification.setChannel(channel);
+        notification.setStatus("error");
+        notification.setCreatedAt(Instant.now().minusSeconds(300)); // 5 minutos atrás
+        notification.setErrorMessage("SMTP connection failed");
+        notification.setPayloadJson(createTestPayload(userId, eventType, channel));
         notification.persist();
         
         return notification;
@@ -166,44 +169,13 @@ public class TestDataHelper {
         );
         
         try {
-            // Se você tiver Jackson disponível nos testes
-            // return new ObjectMapper().writeValueAsString(payload);
-            return formatJsonManually(payload);
+            // Use Jackson ObjectMapper para serializar corretamente
+            return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
-            return formatJsonManually(payload);
+            throw new RuntimeException("Failed to serialize test payload: " + e.getMessage(), e);
         }
     }
     
-    /**
-     * Formata JSON manualmente (fallback)
-     */
-    private static String formatJsonManually(Map<String, Object> data) {
-        StringBuilder json = new StringBuilder("{");
-        boolean first = true;
-        
-        for (Map.Entry<String, Object> entry : data.entrySet()) {
-            if (!first) json.append(",");
-            
-            json.append("\"").append(entry.getKey()).append("\":");
-            
-            if (entry.getValue() instanceof String) {
-                json.append("\"").append(entry.getValue()).append("\"");
-            } else if (entry.getValue() instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> innerMap = (Map<String, Object>) entry.getValue();
-                json.append(formatJsonManually(innerMap));
-            } else if (entry.getValue() instanceof Boolean) {
-                json.append(entry.getValue());
-            } else {
-                json.append("\"").append(entry.getValue()).append("\"");
-            }
-            
-            first = false;
-        }
-        
-        json.append("}");
-        return json.toString();
-    }
     
     /**
      * Setup básico para testes: usuário, projeto e algumas notificações
@@ -277,32 +249,32 @@ public class TestDataHelper {
         
         // Criar notificações com dados específicos para os testes
         Notification sentNotification = new Notification();
-        sentNotification.userId = "user-123";
-        sentNotification.eventType = "PROJECT_READY_REVIEW";
-        sentNotification.channel = "email";
-        sentNotification.status = "sent";
-        sentNotification.createdAt = Instant.now();
-        sentNotification.sentAt = Instant.now();
-        sentNotification.payloadJson = "{\"recipient\":{\"userId\":\"user-123\"}}";
+        sentNotification.setUserId("user-123");
+        sentNotification.setEventType("PROJECT_READY_REVIEW");
+        sentNotification.setChannel("email");
+        sentNotification.setStatus("sent");
+        sentNotification.setCreatedAt(Instant.now());
+        sentNotification.setSentAt(Instant.now());
+        sentNotification.setPayloadJson("{\"recipient\":{\"userId\":\"user-123\",\"email\":\"admin@apporte.com\",\"name\":\"Administrador\",\"recipientType\":\"project_owner\"},\"event\":{\"type\":\"PROJECT_READY_REVIEW\",\"entityType\":\"project\",\"entityId\":\"proj-123\"}}");
         sentNotification.persist();
         
         Notification errorNotification = new Notification();
-        errorNotification.userId = "user-999";
-        errorNotification.eventType = "TEST_EVENT";
-        errorNotification.channel = "email";
-        errorNotification.status = "error";
-        errorNotification.errorMessage = "SMTP connection failed";
-        errorNotification.createdAt = Instant.now().minusSeconds(300); // 5 minutos atrás
-        errorNotification.payloadJson = "{\"recipient\":{\"userId\":\"user-999\"}}";
+        errorNotification.setUserId("user-999");
+        errorNotification.setEventType("TEST_EVENT");
+        errorNotification.setChannel("email");
+        errorNotification.setStatus("error");
+        errorNotification.setErrorMessage("SMTP connection failed");
+        errorNotification.setCreatedAt(Instant.now().minusSeconds(300)); // 5 minutos atrás
+        errorNotification.setPayloadJson("{\"recipient\":{\"userId\":\"user-999\",\"email\":\"user-999@test.example.com\",\"name\":\"Test User 999\",\"recipientType\":\"manual\",\"phone\":\"+5511999999999\"},\"event\":{\"type\":\"TEST_EVENT\",\"entityType\":\"user\",\"entityId\":\"user-999\"}}");
         errorNotification.persist();
         
         Notification pendingNotification = new Notification();
-        pendingNotification.userId = "user-456";
-        pendingNotification.eventType = "TASK_ASSIGNED";
-        pendingNotification.channel = "whatsapp";
-        pendingNotification.status = "pending";
-        pendingNotification.createdAt = Instant.now();
-        pendingNotification.payloadJson = "{\"recipient\":{\"userId\":\"user-456\"}}";
+        pendingNotification.setUserId("user-456");
+        pendingNotification.setEventType("TASK_ASSIGNED");
+        pendingNotification.setChannel("whatsapp");
+        pendingNotification.setStatus("pending");
+        pendingNotification.setCreatedAt(Instant.now());
+        pendingNotification.setPayloadJson("{\"recipient\":{\"userId\":\"user-456\",\"email\":\"user@example.com\",\"name\":\"Regular User\",\"phone\":\"+5511999999999\",\"recipientType\":\"task_assignee\"},\"event\":{\"type\":\"TASK_ASSIGNED\",\"entityType\":\"task\",\"entityId\":\"task-123\"}}");
         pendingNotification.persist();
         
         return new TestData(adminUser, regularUser, project, 

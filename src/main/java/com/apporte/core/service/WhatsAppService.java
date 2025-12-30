@@ -8,7 +8,6 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -36,41 +35,18 @@ public class WhatsAppService {
     private static final Logger LOG = LoggerFactory.getLogger(WhatsAppService.class);
     private static final DateTimeFormatter LOG_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     
-    @Inject
-    WhatsAppTemplateService templateService;
-    
-    @ConfigProperty(name = "whatsapp.enabled", defaultValue = "true")
-    boolean enabled;
-    
-    @ConfigProperty(name = "whatsapp.headless", defaultValue = "false")
-    boolean headless;
-    
-    @ConfigProperty(name = "whatsapp.timeout.seconds", defaultValue = "30")
-    int timeoutSeconds;
-    
-    @ConfigProperty(name = "whatsapp.qr.timeout.seconds", defaultValue = "120")
-    int qrTimeoutSeconds;
-    
-    @ConfigProperty(name = "whatsapp.max.retries", defaultValue = "3")
-    int maxRetries;
-    
-    @ConfigProperty(name = "whatsapp.retry.delay.ms", defaultValue = "2000")
-    long retryDelayMs;
-    
-    @ConfigProperty(name = "whatsapp.session.save", defaultValue = "true")
-    boolean saveSession;
-    
-    @ConfigProperty(name = "whatsapp.session.path", defaultValue = "./whatsapp-session")
-    String sessionPath;
-    
-    @ConfigProperty(name = "whatsapp.driver.path")
-    Optional<String> driverPath;
-    
-    @ConfigProperty(name = "app.system.url", defaultValue = "https://app.apporte.com")
-    String systemUrl;
-    
-    @ConfigProperty(name = "app.name", defaultValue = "Apporte")
-    String appName;
+    private final WhatsAppTemplateService templateService;
+    private final boolean enabled;
+    private final boolean headless;
+    private final int timeoutSeconds;
+    private final int qrTimeoutSeconds;
+    private final int maxRetries;
+    private final long retryDelayMs;
+    private final boolean sessionSave;
+    private final String appName;
+    private final String systemUrl;
+    private final String sessionPath;
+    private final Optional<String> driverPath;
     
     private WebDriver driver;
     private WebDriverWait wait;
@@ -79,6 +55,32 @@ public class WhatsAppService {
     private final Map<String, LocalDateTime> sentMessages = new ConcurrentHashMap<>();
     private final Map<String, Integer> retryCounts = new ConcurrentHashMap<>();
     private final Object driverLock = new Object();
+    
+    public WhatsAppService(WhatsAppTemplateService templateService,
+            @ConfigProperty(name = "whatsapp.enabled", defaultValue = "true") boolean enabled,
+            @ConfigProperty(name = "whatsapp.headless", defaultValue = "false") boolean headless,
+            @ConfigProperty(name = "whatsapp.timeout.seconds", defaultValue = "30") int timeoutSeconds,
+            @ConfigProperty(name = "whatsapp.qr.timeout.seconds", defaultValue = "120") int qrTimeoutSeconds,
+            @ConfigProperty(name = "whatsapp.max.retries", defaultValue = "3") int maxRetries,
+            @ConfigProperty(name = "whatsapp.retry.delay.ms", defaultValue = "2000") long retryDelayMs,
+            @ConfigProperty(name = "whatsapp.session.save", defaultValue = "true") boolean sessionSave,
+            @ConfigProperty(name = "app.name", defaultValue = "Apporte") String appName,
+            @ConfigProperty(name = "app.system.url", defaultValue = "https://app.apporte.com") String systemUrl,
+            @ConfigProperty(name = "whatsapp.session.path", defaultValue = "./whatsapp-session") String sessionPath,
+            @ConfigProperty(name = "whatsapp.driver.path") Optional<String> driverPath) {
+        this.templateService = templateService;
+        this.enabled = enabled;
+        this.headless = headless;
+        this.timeoutSeconds = timeoutSeconds;
+        this.qrTimeoutSeconds = qrTimeoutSeconds;
+        this.maxRetries = maxRetries;
+        this.retryDelayMs = retryDelayMs;
+        this.sessionSave = sessionSave;
+        this.appName = appName;
+        this.systemUrl = systemUrl;
+        this.sessionPath = sessionPath;
+        this.driverPath = driverPath;
+    }
     
     @PostConstruct
     void initialize() {
@@ -131,10 +133,10 @@ public class WhatsAppService {
         }
         
         String message = buildMessageWithTemplate(recipient, request);
-        String messageKey = phoneNumber + ":" + request.getEventType() + ":" + request.getEntityId();
+        String messageKey = phoneNumber + ":" + request.eventType() + ":" + request.entityId();
         
         LOG.info("Sending WhatsApp to {} for event: {} at: {}", 
-                 maskPhone(phoneNumber), request.getEventType(), LocalDateTime.now().format(LOG_FORMATTER));
+                 maskPhone(phoneNumber), request.eventType(), LocalDateTime.now().format(LOG_FORMATTER));
         
         boolean sent = false;
         Exception lastError = null;
@@ -143,7 +145,7 @@ public class WhatsAppService {
             try {
                 LOG.debug("Attempt {} of {} to send WhatsApp message started at: {}", 
                          attempt, maxRetries, LocalDateTime.now().format(LOG_FORMATTER));
-                sendMessageInternal(phoneNumber, message, request.getEventType());
+                sendMessageInternal(phoneNumber, message, request.eventType());
                 
                 sent = true;
                 recordSentMessage(phoneNumber);
@@ -238,10 +240,10 @@ public class WhatsAppService {
         try {
             WhatsAppTemplateData templateData = new WhatsAppTemplateData(
                 recipient.getName() != null ? recipient.getName() : "Colaborador",
-                request.getEventType(),
-                request.getEntityType(),
-                request.getEntityId(),
-                request.getContext() != null ? request.getContext() : new HashMap<>()
+                request.eventType(),
+                request.entityType(),
+                request.entityId(),
+                request.context() != null ? request.context() : new HashMap<>()
             );
             
             String message = templateService.renderTemplate(templateData);
@@ -275,9 +277,9 @@ public class WhatsAppService {
             "Por favor, nao responda este WhatsApp.",
             appName.toUpperCase(),
             recipient.getName() != null ? recipient.getName() : "Colaborador",
-            request.getEventType(),
-            request.getEntityType(),
-            request.getEntityId(),
+            request.eventType(),
+            request.entityType(),
+            request.entityId(),
             LocalDateTime.now().format(LOG_FORMATTER),
             systemUrl
         );
@@ -323,7 +325,7 @@ public class WhatsAppService {
             }
             
             // Configurar diretório de sessão
-            if (saveSession) {
+            if (sessionSave) {
                 Path sessionDir = Paths.get(sessionPath);
                 if (!Files.exists(sessionDir)) {
                     Files.createDirectories(sessionDir);
@@ -497,7 +499,7 @@ public class WhatsAppService {
     }
     
     private void createSessionDirectory() {
-        if (saveSession) {
+        if (sessionSave) {
             try {
                 Path dir = Paths.get(sessionPath);
                 if (!Files.exists(dir)) {
