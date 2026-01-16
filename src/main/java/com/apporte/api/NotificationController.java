@@ -4,6 +4,10 @@ import com.apporte.api.dto.*;
 import com.apporte.api.util.ResponseBuilder;
 import com.apporte.core.model.Notification;
 import com.apporte.core.service.NotificationService;
+import com.apporte.infrastructure.security.KeycloakUserContext;
+import com.apporte.infrastructure.security.UserContext;
+import io.quarkus.security.Authenticated;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -20,17 +24,21 @@ import java.util.*;
 @Path("/api/notifications")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Authenticated
 public class NotificationController {
     
     private static final Logger LOG = LoggerFactory.getLogger(NotificationController.class);
     
     private final NotificationService notificationService;
+    private final KeycloakUserContext keycloakUserContext;
     
-    public NotificationController(NotificationService notificationService) {
+    public NotificationController(NotificationService notificationService, KeycloakUserContext keycloakUserContext) {
         this.notificationService = Objects.requireNonNull(notificationService, "notificationService cannot be null");
+        this.keycloakUserContext = Objects.requireNonNull(keycloakUserContext, "keycloakUserContext cannot be null");
     }
     
     @GET
+    @io.quarkus.security.PermitAll
     public Response healthCheck() {
         return ResponseBuilder.ok(Map.of(
             "message", "Notification Engine is running!",
@@ -41,8 +49,11 @@ public class NotificationController {
     
     @POST
     @Path("/from-workflow")
+    @RolesAllowed({"notification-sender", "notification-admin", "system-admin"})
     public Response processWorkflowNotification(@Valid WorkflowNotificationRequest request) {
-        LOG.info("Received workflow notification: {}", request.eventType());
+        UserContext user = keycloakUserContext.getCurrentUser()
+            .orElseThrow(() -> new WebApplicationException("User not authenticated", Response.Status.UNAUTHORIZED));
+        LOG.info("Received workflow notification: {} from user: {}", request.eventType(), user.email());
         String requestId = ResponseBuilder.generateRequestId();
         
         try {
@@ -70,8 +81,11 @@ public class NotificationController {
     
     @POST
     @Path("/send")
+    @RolesAllowed({"notification-sender", "notification-admin", "system-admin"})
     public Response sendNotification(@Valid SimpleNotificationRequest request) {
-        LOG.info("Manual notification: {} to {}", request.eventType(), request.recipientId());
+        UserContext user = keycloakUserContext.getCurrentUser()
+            .orElseThrow(() -> new WebApplicationException("User not authenticated", Response.Status.UNAUTHORIZED));
+        LOG.info("Manual notification: {} to {} from user: {}", request.eventType(), request.recipientId(), user.email());
         String requestId = ResponseBuilder.generateRequestId();
         
         try {
@@ -100,8 +114,11 @@ public class NotificationController {
     
     @POST
     @Path("/batch")
+    @RolesAllowed({"notification-sender", "notification-admin", "system-admin"})
     public Response sendBatchNotifications(@Valid BatchNotificationRequest batchRequest) {
-        LOG.info("Batch notification with {} items", batchRequest.notifications().size());
+        UserContext user = keycloakUserContext.getCurrentUser()
+            .orElseThrow(() -> new WebApplicationException("User not authenticated", Response.Status.UNAUTHORIZED));
+        LOG.info("Batch notification with {} items from user: {}", batchRequest.notifications().size(), user.email());
         
         if (batchRequest.notifications().isEmpty()) {
             return ResponseBuilder.badRequest("Batch cannot be empty");
@@ -150,6 +167,7 @@ public class NotificationController {
     
     @GET
     @Path("/status/{id}")
+    @RolesAllowed({"notification-viewer", "notification-sender", "notification-admin", "system-admin"})
     public Response getNotificationStatus(@PathParam("id") String id) {
         try {
             Long notificationId = parseId(id);
@@ -173,10 +191,20 @@ public class NotificationController {
     
     @GET
     @Path("/user/{userId}")
+    @RolesAllowed({"notification-viewer", "notification-sender", "notification-admin", "system-admin"})
     public Response getUserNotifications(
             @PathParam("userId") String userId,
             @QueryParam("status") String status,
             @QueryParam("limit") @DefaultValue("20") int limit) {
+        
+        UserContext user = keycloakUserContext.getCurrentUser()
+            .orElseThrow(() -> new WebApplicationException("User not authenticated", Response.Status.UNAUTHORIZED));
+        
+        // Usuários só podem ver suas próprias notificações, exceto admins
+        if (!user.isAdmin() && !user.userId().equals(userId)) {
+            LOG.warn("User {} tried to access notifications of user {}", user.email(), userId);
+            return ResponseBuilder.forbidden("You can only access your own notifications");
+        }
         
         Objects.requireNonNull(userId, "userId cannot be null");
         
